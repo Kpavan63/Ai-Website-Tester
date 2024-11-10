@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Tools Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        body {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .dashboard-card {
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .fan {
+            width: 100px;
+            height: 100px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            transition: transform 0.1s linear;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="container mx-auto">
+        <h1 class="text-4xl font-bold text-center text-white mb-8">Enhanced AI Tools Dashboard</h1>
+        
+        <div class="dashboard-card p-6 mb-6">
+            <input type="url" id="urlInput" placeholder="Enter website URL" class="w-full p-2 border rounded mb-2" required>
+            <div class="flex space-x-2">
+                <button id="analyzeBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex-grow">Analyze</button>
+                <button id="exportBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Export Report</button>
+            </div>
+        </div>
+
+        <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">AI Tool Usage</h2>
+                <canvas id="aiToolsChart"></canvas>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Page Speed</h2>
+                <div id="pageSpeedGauge" style="width: 100%; height: 300px;"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">SEO Score</h2>
+                <div id="seoScoreGauge" style="width: 100%; height: 300px;"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Performance Metrics</h2>
+                <canvas id="performanceChart"></canvas>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Server Resources</h2>
+                <div id="serverResourcesChart" style="width: 100%; height: 300px;"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Network Information</h2>
+                <div id="networkInfo"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Daily Traffic</h2>
+                <div id="dailyTrafficChart"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Ad Detection</h2>
+                <div id="adDetectionInfo"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Security Issues</h2>
+                <div id="securityIssuesInfo"></div>
+            </div>
+            <div class="dashboard-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Cooling System</h2>
+                <div class="flex items-center justify-between">
+                    <div id="fan" class="fan"></div>
+                    <div id="coolingInfo" class="text-2xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const aiTools = [
+            'ChatGPT', 'DALL-E', 'Midjourney', 'Jasper', 'Copy.ai',
+            'Grammarly', 'Otter.ai', 'Lumen5', 'Synthesia', 'RunwayML',
+            'Replika', 'Stable Diffusion', 'GPT-3', 'Anthropic Claude',
+            'DeepL', 'Hugging Face', 'OpenAI Codex', 'IBM Watson',
+            'Google Cloud AI', 'Amazon SageMaker'
+        ];
+
+        function getRandomData(max, length = aiTools.length) {
+            return Array.from({length}, () => Math.floor(Math.random() * max));
+        }
+
+        function createChart(id, type, labels, data, label) {
+            const ctx = document.getElementById(id).getContext('2d');
+            return new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 199, 199, 0.6)',
+                            'rgba(83, 102, 255, 0.6)',
+                            'rgba(40, 159, 64, 0.6)',
+                            'rgba(210, 199, 199, 0.6)'
+                        ],
+                        borderColor: 'rgba(200, 200, 200, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function createGauge(id, value, name) {
+            const chart = echarts.init(document.getElementById(id));
+            const option = {
+                series: [{
+                    type: 'gauge',
+                    progress: {
+                        show: true,
+                        width: 18
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            width: 18
+                        }
+                    },
+                    axisTick: {
+                        show: false
+                    },
+                    splitLine: {
+                        length: 15,
+                        lineStyle: {
+                            width: 2,
+                            color: '#999'
+                        }
+                    },
+                    axisLabel: {
+                        distance: 25,
+                        color: '#999',
+                        fontSize: 14
+                    },
+                    anchor: {
+                        show: true,
+                        showAbove: true,
+                        size: 25,
+                        itemStyle: {
+                            borderWidth: 10
+                        }
+                    },
+                    title: {
+                        show: true
+                    },
+                    detail: {
+                        valueAnimation: true,
+                        fontSize: 30,
+                        offsetCenter: [0, '70%']
+                    },
+                    data: [{
+                        value: value,
+                        name: name
+                    }]
+                }]
+            };
+            chart.setOption(option);
+        }
+
+        function createServerResourcesChart(cpuUsage, ramUsage) {
+            const chart = echarts.init(document.getElementById('serverResourcesChart'));
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        label: {
+                            backgroundColor: '#6a7985'
+                        }
+                    }
+                },
+                legend: {
+                    data: ['CPU Usage', 'RAM Usage']
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59']
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                series: [
+                    {
+                        name: 'CPU Usage',
+                        type: 'line',
+                        data: cpuUsage
+                    },
+                    {
+                        name: 'RAM Usage',
+                        type: 'line',
+                        data: ramUsage
+                    }
+                ]
+            };
+            chart.setOption(option);
+        }
+
+        function createDailyTrafficChart(data) {
+            const options = {
+                chart: {
+                    type: 'area',
+                    height: 350,
+                    zoom: {
+                        enabled: false
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth'
+                },
+                series: [{
+                    name: 'Daily Visitors',
+                    data: data
+                }],
+                title: {
+                    text: 'Website Traffic Trend',
+                    align: 'left'
+                },
+                subtitle: {
+                    text: 'Number of visitors',
+                    align: 'left'
+                },
+                labels: [...Array(30).keys()].map(i => moment().subtract(29 - i, 'days').format('MMM D')),
+                xaxis: {
+                    type: 'datetime',
+                },
+                yaxis: {
+                    opposite: true
+                },
+                legend: {
+                    horizontalAlign: 'left'
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#dailyTrafficChart"), options);
+            chart.render();
+        }
+
+        function updateCoolingSystem(percentage) {
+            const fan = document.getElementById('fan');
+            const coolingInfo = document.getElementById('coolingInfo');
+            
+            fan.style.animation = `rotate ${100 / percentage}s linear infinite`;
+            coolingInfo.textContent = `${percentage}%`;
+        }
+
+        function simulateApiCall(endpoint) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const randomData = getRandomData(100, 30);
+                    resolve(randomData);
+                }, Math.random() * 1500 + 500);
+            });
+        }
+
+        async function analyzeWebsite() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Please enter a valid URL',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Analyzing...',
+                text: 'Please wait while we analyze the website',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const [
+                    aiToolsData,
+                    pageSpeedData,
+                    seoScoreData,
+                    performanceData,
+                    serverResourcesData,
+                    networkData,
+                    trafficData,
+                    adData,
+                    securityData,
+                    coolingData
+                ] = await Promise.all([
+                    simulateApiCall('/api/aitools'),
+                    simulateApiCall('/api/pagespeed'),
+                    simulateApiCall('/api/seoscore'),
+                    simulateApiCall('/api/performance'),
+                    simulateApiCall('/api/serverresources'),
+                    simulateApiCall('/api/network'),
+                    simulateApiCall('/api/traffic'),
+                    simulateApiCall('/api/ads'),
+                    simulateApiCall('/api/security'),
+                    simulateApiCall('/api/cooling')
+                ]);
+
+                createChart('aiToolsChart', 'bar', aiTools, aiToolsData.slice(0, 10), 'Usage Percentage');
+                createGauge('pageSpeedGauge', Math.floor(pageSpeedData[0]), 'Page Speed');
+                createGauge('seoScoreGauge', Math.floor(seoScoreData[0]), 'SEO Score');
+                createChart('performanceChart', 'radar', ['FCP', 'LCP', 'CLS', 'TBT', 'TTI'], performanceData.slice(0, 5), 'Core Web Vitals');
+                createServerResourcesChart(serverResourcesData.slice(0, 7), serverResourcesData.slice(7, 14));
+
+                document.getElementById('networkInfo').innerHTML = `
+                    <p><strong>Effective Connection Type:</strong> 4g</p>
+                    <p><strong>Downlink:</strong> ${(networkData[0] / 10).toFixed(2)} Mbps</p>
+                    <p><strong>RTT:</strong> ${networkData[1]} ms</p>
+                    <p><strong>Save-Data:</strong> ${networkData[2] > 50 ? 'On' : 'Off'}</p>
+                `;
+
+                createDailyTrafficChart(trafficData);
+
+                document.getElementById('adDetectionInfo').innerHTML = `
+                    <p><strong>Ads Detected:</strong> ${adData[0]}</p>
+                    <p><strong>Ad Networks:</strong> ${adData[0] > 0 ? 'Google AdSense, Media.net' : 'None'}</p>
+                    <p><strong>Ad Blocker Detected:</strong> ${adData[1] > 50 ? 'Yes' : 'No'}</p>
+                `;
+
+                document.getElementById('securityIssuesInfo').innerHTML = `
+                    <p><strong>Security Score:</strong> ${securityData[0]}/100</p>
+                    <p><strong>SSL/TLS:</strong> ${securityData[0] > 70 ? 'Valid' : 'Invalid or Expired'}</p>
+                    <p><strong>XSS Protection:</strong> ${securityData[1] > 50 ? 'Enabled' : 'Disabled'}</p>
+                    <p><strong>Content Security Policy:</strong> ${securityData[2] > 50 ? 'Implemented' : 'Not Implemented'}</p>
+                `;
+
+                updateCoolingSystem(coolingData[0]);
+
+                Swal.fire({
+                    title: 'Analysis Complete!',
+                    text: 'The dashboard has been updated with the latest data',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            } catch (error) {
+                console.error('Error during analysis:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'An error occurred during the analysis. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+
+        document.getElementById('analyzeBtn').addEventListener('click', analyzeWebsite);
+
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            Swal.fire({
+                title: 'Export Report',
+                text: 'Generating PDF report...',
+                timer: 2000,
+                timerProgressBar: true,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            }).then((result) => {
+                if (result.dismiss === Swal.DismissReason.timer) {
+                    Swal.fire({
+                        title: 'Report Generated',
+                        text: 'Your PDF report has been generated and is ready for download.',
+                        icon: 'success',
+                        confirmButtonText: 'Download'
+                    })
+                }
+            })
+        });
+
+        // Initial cooling system animation
+        updateCoolingSystem(75);
+    </script>
+</body>
+</html>
